@@ -339,6 +339,7 @@ switch ($action = Req::val('action'))
         Backend::upload_links($task['task_id'], '0', 'userlink');
 
         $_SESSION['SUCCESS'] = L('taskupdated');
+        Flyspray::Redirect(CreateURL('details', $task['task_id']));
         break;
 
         // ##################
@@ -361,6 +362,8 @@ switch ($action = Req::val('action'))
         Backend::close_task($task['task_id'], Post::val('resolution_reason'), Post::val('closure_comment', ''), Post::val('mark100', false));
 
         $_SESSION['SUCCESS'] = L('taskclosedmsg');
+        # FIXME there are several pages using this form, details and pendingreq at least
+        #Flyspray::Redirect(CreateURL('details', $task['task_id']));
         break;
 
     case 'details.associatesubtask':
@@ -459,6 +462,8 @@ switch ($action = Req::val('action'))
         Flyspray::logEvent($task['task_id'], 13);
 
         $_SESSION['SUCCESS'] = L('taskreopenedmsg');
+	# FIXME there are several pages using this form, details and pendingreq at least
+	#Flyspray::Redirect(CreateURL('details', $task['task_id']));
         break;
 
         // ##################
@@ -475,8 +480,9 @@ switch ($action = Req::val('action'))
             Backend::add_notification($user->id, $task['task_id']);
         }
 
-        $_SESSION['SUCCESS'] = L('commentaddedmsg');
-        break;
+	$_SESSION['SUCCESS'] = L('commentaddedmsg');
+	Flyspray::Redirect(CreateURL('details', $task['task_id']));
+	break;
 
         // ##################
         // Tracking
@@ -512,6 +518,8 @@ switch ($action = Req::val('action'))
             $effort->addEffort(Post::val('effort_to_add'), $proj);
             $_SESSION['SUCCESS'] = L('efforttrackingadded');
         }
+        
+        Flyspray::Redirect(CreateURL('details', $task['task_id']).'#effort');
         break;
 
         // ##################
@@ -974,7 +982,8 @@ switch ($action = Req::val('action'))
 			    'smtp_user', 'smtp_pass', 'funky_urls', 'reminder_daemon','cache_feeds', 'intro_message',
                 'disable_lostpw','disable_changepw','days_before_alert', 'emailNoHTML', 'need_approval', 'pages_welcome_msg',
                 'active_oauths', 'only_oauth_reg', 'enable_avatars', 'max_avatar_size', 'default_order_by', 'default_order_by_dir',
-                'max_vote_per_day', 'votes_per_project', 'url_rewriting');
+                'max_vote_per_day', 'votes_per_project', 'url_rewriting',
+                'custom_style');
         if(Post::val('need_approval') == '1' && Post::val('spam_proof'))
             unset($_POST['spam_proof']);//if self register request admin to approve, disable spam_proof
         //if you think different, modify functions in class.user.php directing different regiser tpl
@@ -994,6 +1003,10 @@ switch ($action = Req::val('action'))
 			Flyspray::show_error(L('nomodrewrite'));
 			break;
 		}
+	}
+
+	if( substr(Post::val('custom_style'), -4) != '.css'){
+		$_POST['custom_style']='';
 	}
 
         foreach ($settings as $setting) {
@@ -1174,6 +1187,7 @@ switch ($action = Req::val('action'))
         // Update project prefs for following scripts
         $proj = new Project($proj->id);
         $_SESSION['SUCCESS'] = L('projectupdated');
+        Flyspray::Redirect(CreateURL('pm', 'prefs', $proj->id));
         break;
 
         // ##################
@@ -1851,6 +1865,7 @@ switch ($action = Req::val('action'))
         // TODO: Log event in a later version.
 
         $_SESSION['SUCCESS'] = L('notifyadded');
+        Flyspray::Redirect(CreateURL('details', $task['task_id']).'#notify');
         break;
 
         // ##################
@@ -1862,6 +1877,9 @@ switch ($action = Req::val('action'))
         // TODO: Log event in a later version.
 
         $_SESSION['SUCCESS'] = L('notifyremoved');
+        # if on details page we should redirect to details with a GET
+        # but what if the request comes from another page (like myprofile for instance maybe in future)
+        Flyspray::Redirect(CreateURL('details', $task['task_id']).'#notify');
         break;
 
         // ##################
@@ -2351,22 +2369,26 @@ switch ($action = Req::val('action'))
             Flyspray::show_error(L('votefailed'));
             break;
         }
+        // TODO: Log event in a later version.
         break;
 
-        // TODO: Log event in a later version.
 
-        // ##################
-        // Removing a vote for a task
-        // ##################
-    case 'details.removevote':
-        if (Backend::remove_vote($user->id, $task['task_id'])) {
-            $_SESSION['SUCCESS'] = L('voteremoved');
-        } else {
-            Flyspray::show_error(L('voteremovefailed'));
-            break;
-        }
+	// ##################
+	// Removing a vote for a task
+	// ##################
+	# used to remove a vote from myprofile page
+	case 'removevote':
+	# peterdd: I found no details.removevote action in source, so details.removevote is not used, but was planned on the task details page or in the old blue theme?
+	case 'details.removevote':
+		if (Backend::remove_vote($user->id, $task['task_id'])) {
+			$_SESSION['SUCCESS'] = L('voteremoved');
+		} else {
+			Flyspray::show_error(L('voteremovefailed'));
+			break;
+		}
+		// TODO: Log event in a later version, but also see if maybe done here Backend::remove_vote()...
+	break;
 
-        // TODO: Log event in a later version.
 
         // ##################
         // set supertask id

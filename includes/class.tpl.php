@@ -500,42 +500,67 @@ function tpl_date_formats($selected, $detailed = false)
 }
 
 // {{{ Options for a <select>
+/**
+ * @options array of values
+ * For optgroups, the values should be presorted by the optgroups
+ * example:
+ * $options=array(
+ * 	array(3,'project3',1), # active project group
+ * 	array(2,'project2',1),
+ * 	array(5,'project5',0)  # inactive project optgroup
+ * ); tpl_options($options, 2)
+*/
 function tpl_options($options, $selected = null, $labelIsValue = false, $attr = null, $remove = null)
 {
-    $html = '';
+	$html = '';
 
-    // force $selected to be an array.
-    // this allows multi-selects to have multiple selected options.
+	// force $selected to be an array.
+	// this allows multi-selects to have multiple selected options.
+	$selected = is_array($selected) ? $selected : (array) $selected;
+	$options = is_array($options) ? $options : (array) $options;
 
-    // operate by value ..
-    $selected = is_array($selected) ? $selected : (array) $selected;
-    $options = is_array($options) ? $options : (array) $options;
+	$lastoptgroup=0;
+	$optgroup=0;
+        $ingroup=false;
+	foreach ($options as $value=>$label) {
+		if (is_array($label)) {
+			$value = $label[0];
+			$optgroup=isset($label[2]) ? $label[2] : 0;
+			$label = $label[1];
+		}
+		$label = htmlspecialchars($label, ENT_QUOTES, 'utf-8');
+		$value = $labelIsValue ? $label : htmlspecialchars($value, ENT_QUOTES, 'utf-8');
 
-    foreach ($options as $value=>$label)
-    {
-        if (is_array($label)) {
-            $value = $label[0];
-            $label = $label[1];
-        }
-        $label = htmlspecialchars($label, ENT_QUOTES, 'utf-8');
-        $value = $labelIsValue ? $label
-                               : htmlspecialchars($value, ENT_QUOTES, 'utf-8');
+		if ($value === $remove) {
+			continue;
+		}
 
-        if ($value === $remove) {
-            continue;
-        }
+		if ($optgroup!=$lastoptgroup) {
+			if ($ingroup) {
+				$html.='</optgroup>';  
+			}
+			# just a temp hack, we currently use optgroups only for project dropdown...
+			$html.='<optgroup'.($optgroup==0 ? ' label="'.L('inactive').'"' : '' ).'>';
+			$ingroup=true;  
+		}
 
-        $html .= '<option value="'.$value.'"';
-        if (in_array($value, $selected)) {
-            $html .= ' selected="selected"';
-        }
-        $html .= ($attr ? join_attrs($attr): '') . '>' . $label . '</option>';
-    }
-    if (!$html) {
-        $html .= '<option value="0">---</option>';
-    }
+		$html .= '<option value="'.$value.'"';
+		if (in_array($value, $selected)) {
+			$html .= ' selected="selected"';
+		}
+		$html .= ($attr ? join_attrs($attr): '') . '>' . $label . '</option>';
+		$lastoptgroup=$optgroup;
+	}
+	
+	if ($ingroup) { 
+	$html.='</optgroup>';
+	}
+	
+	if (!$html) {
+		$html .= '<option value="0">---</option>';
+	}
 
-    return $html;
+	return $html;
 } // }}}
 // {{{ Double <select>
 function tpl_double_select($name, $options, $selected = null, $labelIsValue = false, $updown = true)
@@ -675,9 +700,6 @@ class TextFormatter
             //possibly an conversion from Dokuwiki syntax to html issue, left in in case anyone has issues and needs to comment out
             //$text = ' ' . nl2br($text) . ' ';
             
-            // Change URLs into hyperlinks
-            $text = preg_replace('#[[:space:]|^[:alpha:]]+[[:alpha:]]+://[^<>[:space:]]+[[:alnum:]/]#', '<a href="\0">\0</a>', $text);
-
             // Change FS#123 into hyperlinks to tasks
             return preg_replace_callback("/\b(?:FS#|bug )(\d+)\b/", 'tpl_fast_tasklink', trim($text));
         }
@@ -863,10 +885,14 @@ function CreateURL($type, $arg1 = null, $arg2 = null, $arg3 = array())
                 $return = $url . 'proj' . $arg1;
                 break;
                 
+            case 'reports':    
             case 'roadmap':
             case 'toplevel':
             case 'gantt':
             case 'index':
+            	$return = $url.$type.'/proj'.$arg1;
+            	break;
+            	
             case 'newtask':
             case 'newmultitasks':
                 $return = $url . $type . '/proj' . $arg1 . ($arg2 ? '/supertask' . $arg2 : '');
@@ -882,19 +908,22 @@ function CreateURL($type, $arg1 = null, $arg2 = null, $arg3 = array())
             case 'register':
                 $return = $url . $type;
                 break;
-            case 'reports':
-                $return = $url.'reports/proj'.$arg1;
-                break;
+            
             case 'mytasks':
                 $return = $url.'proj'.$arg1.'/dev'.$arg2;
                 break;
             case 'tasklist':
-            	$return = $url.'proj'.$arg1;
+		# see also .htaccess for the mapping
+		if($arg1>0 && $fs->projects[$arg1]['default_entry']=='index'){
+			$return = $url.'proj'.$arg1;
+		}else{
+			$return = $url.$type.'/proj'.$arg1;
+		}
+
             	break;
             default:
             	$return = $baseurl . 'index.php';
             	break;
-
         }
     } else {
         if ($type == 'edittask') {
@@ -932,10 +961,15 @@ function CreateURL($type, $arg1 = null, $arg2 = null, $arg3 = array())
                 $return = $baseurl . 'index.php?project=' . $arg1;
                 break;
 
+            case 'reports':
             case 'roadmap':
             case 'toplevel':
             case 'gantt':
             case 'index':
+            case 'tasklist':
+            	$return = $url . '&project=' . $arg1;
+            	break;
+
             case 'newtask':
             case 'newmultitasks':
                 $return = $url . '&project=' . $arg1 . ($arg2 ? '&supertask=' . $arg2 : '');
@@ -948,16 +982,14 @@ function CreateURL($type, $arg1 = null, $arg2 = null, $arg3 = array())
             case 'lostpw':
             case 'myprofile':
             case 'register':
-            case 'reports':
             	$return = $url;
             	break;
+
             case 'mytasks':
             	$return = $baseurl.'index.php?do=index&project='.$arg1.'&dev='.$arg2;
             	break;
-            case 'tasklist':
-            	$return = $baseurl.'index.php?project='.$arg1;
-            	break;
-        	default:
+
+            default:
         		$return = $baseurl . 'index.php';
         		break;
         }
@@ -969,6 +1001,7 @@ function CreateURL($type, $arg1 = null, $arg2 = null, $arg3 = array())
     }
     return $url->get();
 } // }} }
+
 // Page  numbering {{{
 // Thanks to Nathan Fritz for this.  http://www.netflint.net/
 function pagenums($pagenum, $perpage, $totalcount)
@@ -985,18 +1018,23 @@ function pagenums($pagenum, $perpage, $totalcount)
     $pages  = ceil($totalcount / $perpage);
     $output = sprintf(eL('page'), $pagenum, $pages);
 
-    if (!($totalcount / $perpage <= 1)) {
-        $output .= '<span class="DoNotPrint"> &nbsp;&nbsp;--&nbsp;&nbsp; ';
+    if ( $totalcount / $perpage > 1 ) {
+ 	$params=$_GET;
+ 	# unset unneeded params for shorter urls
+	unset($params['do']);
+	unset($params['project']);
+	unset($params['switch']);
+        $output .= '<span class="pagenums DoNotPrint">';
 
         $start  = max(1, $pagenum - 4 + min(2, $pages - $pagenum));
         $finish = min($start + 4, $pages);
 
         if ($start > 1) {
-            $url = Filters::noXSS(CreateURL('index', $proj->id, null, array_merge($_GET, array('pagenum' => 1))));
+            $url = Filters::noXSS(CreateURL('tasklist', $proj->id, null, array_merge($params, array('pagenum' => 1))));
             $output .= sprintf('<a href="%s">&lt;&lt;%s </a>', $url, eL('first'));
         }
         if ($pagenum > 1) {
-            $url = Filters::noXSS(CreateURL('index', $proj->id, null, array_merge($_GET, array('pagenum' => $pagenum - 1))));
+            $url = Filters::noXSS(CreateURL('tasklist', $proj->id, null, array_merge($params, array('pagenum' => $pagenum - 1))));
             $output .= sprintf('<a id="previous" accesskey="p" href="%s">&lt; %s</a> - ', $url, eL('previous'));
         }
 
@@ -1008,17 +1046,17 @@ function pagenums($pagenum, $perpage, $totalcount)
             if ($pagelink == $pagenum) {
                 $output .= sprintf('<strong>%d</strong>', $pagelink);
             } else {
-                $url = Filters::noXSS(CreateURL('index', $proj->id, null, array_merge($_GET, array('pagenum' => $pagelink))));
+                $url = Filters::noXSS(CreateURL('tasklist', $proj->id, null, array_merge($params, array('pagenum' => $pagelink))));
                 $output .= sprintf('<a href="%s">%d</a>', $url, $pagelink);
             }
         }
 
         if ($pagenum < $pages) {
-            $url =  Filters::noXSS(CreateURL('index', $proj->id, null, array_merge($_GET, array('pagenum' => $pagenum + 1))));
+            $url =  Filters::noXSS(CreateURL('tasklist', $proj->id, null, array_merge($params, array('pagenum' => $pagenum + 1))));
             $output .= sprintf(' - <a id="next" accesskey="n" href="%s">%s &gt;</a>', $url, eL('next'));
         }
         if ($finish < $pages) {
-            $url = Filters::noXSS(CreateURL('index', $proj->id, null, array_merge($_GET, array('pagenum' => $pages))));
+            $url = Filters::noXSS(CreateURL('tasklist', $proj->id, null, array_merge($params, array('pagenum' => $pages))));
             $output .= sprintf('<a href="%s"> %s &gt;&gt;</a>', $url, eL('last'));
         }
         $output .= '</span>';

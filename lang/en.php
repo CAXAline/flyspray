@@ -90,7 +90,11 @@ $language = array(
 'showgravatars'           => 'Show Gravatars',
 'emailNoHTML'             => 'No HTML in E-Mails',
 'intromessage'            => 'Introductory message',
+'active'                  => 'active',
+'inactive'                => 'inactive',
 'isactive'                => 'Project is active',
+'showinactive'            => 'Show inactive projects',
+'hideinactive'            => 'Hide inactive projects',
 'createproject'           => 'Create a new Project',
 'nopermission'            => 'You don\'t have permission to use this page.',
 'listordertip'            => 'The order these items will appear in the list',
@@ -1031,12 +1035,11 @@ Regards,',
 'myvotes'                 => 'My Votes',
 'tag'                     => 'Tag',
 'tags'                    => 'Tags',
-'tagsinfo'                => 'Free tagging/labeling of tasks in Flyspray:
-Separate tags by ;
-Tags are currently not managable and are not used for search or filtering. They are currently just like additional stickers on a window.',
+'tagsinfo'                => 'Free tagging/labeling of tasks in Flyspray: Separate tags by ; They aren\'t used yet for searching, sorting or filtering.',
 'novalues'                => 'no entries',
 'youhaveregistered'       => 'You have registered at Flyspray. Your details are as follows:',
 'youhaveregisterednotify' => 'Your registration at Flyspray has been accepted by Administrators.',
 'usedintasks'             => 'Usage',
+'freetagging'             => 'allow user defined tags',
 );
 ?>

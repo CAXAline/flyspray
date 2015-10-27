@@ -1,4 +1,6 @@
-[![Build Status](https://travis-ci.org/peterdd/flyspray.svg?branch=master)](https://travis-ci.org/peterdd/flyspray)
+[![Build Status](https://travis-ci.org/peterdd/flyspray.svg?branch=master)](https://travis-ci.org/peterdd/flyspray) Flyspray/peterdd
+
+[![Build Status](https://travis-ci.org/Flyspray/flyspray.svg?branch=master)](https://travis-ci.org/Flyspray/flyspray) Flyspray/flyspray
 
 Please do not use Github for your bug reports or feature request. Instead use our live bug tracker at http://bugs.flyspray.org
 
@@ -43,8 +45,11 @@ http://flyspray.org/manual/install
     You can find Composer using the following link: https://getcomposer.org/
 
 #### Installing via command lines
+
     curl -sS https://getcomposer.org/installer | php
-    or if you don't have curl
+
+Or if you don't have curl:
+
     php -r "readfile('https://getcomposer.org/installer');" | php
 
 #### Windows users can dowload Windows installer on https://getcomposer.org/download/
